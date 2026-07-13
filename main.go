@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/chinmayyy01/ghostplay/proxy"
 )
 
 func getEnv(key, fallback string) string {
@@ -20,8 +22,15 @@ func healthzHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	port:= getEnv("PORT", "8080")
+	port := getEnv("PORT", "8080")
+	targetURL := os.Getenv("TARGET_URL")
+	if targetURL == "" {
+		log.Fatal("TARGET_URL env var is required, e.g. TARGET_URL=https://httpbin.org go run .")
+	}
+
 	http.HandleFunc("/healthz", healthzHandler)
+	http.HandleFunc("/", proxy.ProxyHandler(targetURL))
+
 	fmt.Printf("GhostPlay starting on :%s\n", port)
 	fmt.Printf("Try: curl localhost:%s/healthz\n", port)
 
