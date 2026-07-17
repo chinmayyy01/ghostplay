@@ -7,13 +7,15 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/chinmayyy01/ghostplay/storage"
 )
 
 var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
 }
 
-func ProxyHandler(targetURL string) http.HandlerFunc {
+func ProxyHandler(targetURL string, store *storage.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -65,5 +67,20 @@ func ProxyHandler(targetURL string) http.HandlerFunc {
 		w.Write(respBody)
  
 		log.Printf("%s %s -> %d (%s)", r.Method, r.URL.Path, resp.StatusCode, duration)
+
+		record := storage.NewRecord(
+			r.Method,
+			r.URL.Path,
+			r.URL.RawQuery,
+			r.Header,
+			string(bodyBytes),
+			resp.StatusCode,
+			resp.Header,
+			string(respBody),
+			duration.Milliseconds(),
+		)
+		if err := store.Save(record); err != nil {
+			log.Printf("RECORD ERROR failed to save session: %v", err)
+		}
 	}		
 }
